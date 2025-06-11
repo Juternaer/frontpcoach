@@ -1,10 +1,7 @@
 # Project Name
-- Document your project here
-- Description
-- Data used
-- Which API you're using
-- Where your front-end can be accessed
-- ...
+- PocketCoach (Frontend)
+- This is the frontend of our emotion detection application - "PocketCoach"
+- Initial Data being used -> from kaggle
 
 # Setup instructions
-Document here for users who want to setup the package locally
+
