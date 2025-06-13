@@ -32,6 +32,6 @@ secrets.toml
 # Complete to your desire
 
 # recordings
-recordings/
-*.mp3
-*.wav
+#recordings/
+#*.mp3
+#*.wav
