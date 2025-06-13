@@ -19,7 +19,7 @@ def save_audio_recording(audio_data):
     try:
         # Save the audio file
         with open(filepath, "wb") as f:
-            f.write(audio_data)
+            f.write(audio_data.getvalue())
         return True, filename
     except Exception as e:
         return False, str(e)
