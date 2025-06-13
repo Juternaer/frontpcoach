@@ -1,13 +1,52 @@
 import streamlit as st
 import requests
-import random
-import uuid
+import os
+from datetime import datetime
 
 API_URL = "http://localhost:8000/chat"
 LOGIN_URL = "http://localhost:8000/login"  # Adjust this endpoint as needed
 
 
 st.set_page_config(page_title="Therapist Chat", page_icon="💬")
+
+
+def transcribe_audio_to_backend(audio_data, filename):
+    files = {"audio_file": (filename, audio_data, "audio/wav")}
+    response = requests.post("http://localhost:8000/transcribe-audio/", files=files)
+    try:
+        return response.json()
+    except Exception:
+        print("Backend response text:", response.text)
+        print("Status code:", response.status_code)
+        raise
+
+def upload_audio_to_backend(audio_data, filename):
+    """
+    Uploads the audio file to the FastAPI backend.
+    """
+    files = {"audio_file": (filename, audio_data, "audio/wav")}
+    response = requests.post("http://localhost:8000/upload-audio/", files=files)
+    return response.json()
+
+def save_audio_recording(audio_data):
+    """
+    Save audio recording to the recordings folder
+    """
+    RECORDINGS_DIR = "recordings"
+    if not os.path.exists(RECORDINGS_DIR):
+        os.makedirs(RECORDINGS_DIR)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"recording_{timestamp}.wav"
+    filepath = os.path.join(RECORDINGS_DIR, filename)
+
+    try:
+        with open(filepath, "wb") as f:
+            f.write(audio_data.getvalue())
+        return True, filename
+    except Exception as e:
+        return False, str(e)
+
 
 def fetch_history(session_id):
     try:
@@ -60,6 +99,18 @@ if "messages" not in st.session_state:
 
 st.title("Therapist Chat")
 st.write(f"Logged in as: {st.session_state.username}")
+
+# --- Audio Recorder in Sidebar ---
+st.sidebar.title("Audio Recorder")
+audio_data = st.sidebar.audio_input("Record your voice", key="audio_input")
+
+
+if audio_data:
+    st.sidebar.audio(audio_data)
+    if st.sidebar.button("Transcribe Recording", key="transcribe_recording_sidebar"):
+        filename = f"recording_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
+        result = transcribe_audio_to_backend(audio_data.getvalue(), filename)
+        st.sidebar.info(f"Transcription: {result.get('transcription')}")
 
 # Display the chat history
 for msg in st.session_state.messages:
