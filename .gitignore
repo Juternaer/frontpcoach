@@ -10,6 +10,9 @@
 # Ignore these macos generated files
 .DS_Store
 
+#ignore recordings
+recordings/
+
 # Ignore these Windows generated files
 *Zone.Identifier
 
