@@ -1,43 +1,65 @@
 import streamlit as st
 import requests
 import random
+import uuid
 
 API_URL = "http://localhost:8000/chat"
+LOGIN_URL = "http://localhost:8000/login"  # Adjust this endpoint as needed
 
-##  CHANGE: add one random question to the first prompt, so the llm knows what was asked
-INITIAL_QUESTIONS = [
-    "Hi there! I'm here to listen. How are you feeling today?",
-    "Hello! What would you like to talk about today?",
-    "Good day! What's on your mind right now?",
-    "Hi! How can I support you today?",
-    "How do you feel?",
-    "How was your breakfast?",
-    "How was your dinner?"
-]
 
 st.set_page_config(page_title="Therapist Chat", page_icon="💬")
 
+def fetch_history(session_id):
+    try:
+        resp = requests.get(f"http://localhost:8000/chat/{session_id}/history", timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        # Convert backend format to frontend format
+        history = data.get("history", [])
+        messages = []
+        for entry in history:
+            role = entry.get("role", "assistant")
+            content = entry.get("content", "")
+            messages.append({"role": role, "content": content})
+        return messages
+    except Exception as e:
+        st.warning(f"Could not load previous chat history: {e}")
+        return []
 
-# if there paramaters available from the chat, initialize
-if "session_id" not in st.session_state:
-    params = st.query_params
-    sid_list = params.get("session_id", [])
-    sid = sid_list[0] if sid_list else None
-    st.session_state.session_id = sid
+def login():
+    st.title("Login")
+    username = st.text_input("Enter your username")
+    if st.button("Login"):
+        if username:
+            try:
+                # Only send username
+                resp = requests.post(LOGIN_URL, json={"username": username}, timeout=10)
+                resp.raise_for_status()
+                data = resp.json()
+                session_id = data.get("session_id")
+                st.session_state.username = username
+                st.session_state.session_id = session_id
+                st.success("Login successful!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Login failed: {e}")
+        else:
+            st.warning("Please enter a username.")
 
+if "username" not in st.session_state:
+    login()
+    st.stop()
 
-
-
-## if there is no history or no sessions_state, initialize
+# --- Initialize chat history ---
 if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "initialized" not in st.session_state:
-    # Show a first UX prompt locally    ###(adjust later)
-    first_q = random.choice(INITIAL_QUESTIONS)
-    st.session_state.messages.append({"role": "assistant", "content": first_q})
-    st.session_state.initialized = True
+    if "session_id" in st.session_state and st.session_state.session_id:
+        st.session_state.messages = fetch_history(st.session_state.session_id)
+    else:
+        st.session_state.messages = []
+
 
 st.title("Therapist Chat")
+st.write(f"Logged in as: {st.session_state.username}")
 
 # Display the chat history
 for msg in st.session_state.messages:
@@ -45,28 +67,23 @@ for msg in st.session_state.messages:
 
 # Input area
 if user_input := st.chat_input("Your message..."):
-    # 1. Display user message
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.chat_message("user").write(user_input)
 
-    # 2. Prepare payload
     payload = {"message": user_input}
     if st.session_state.session_id:
         payload["session_id"] = st.session_state.session_id
 
-    # 3. Send to backend
     with st.spinner("Therapist is thinking..."):
         try:
             resp = requests.post(API_URL, json=payload, timeout=60)
             resp.raise_for_status()
             data = resp.json()
-            # 4. Update session_id (and persist in URL if new)
             new_sid = data.get("session_id", None)
             if new_sid and new_sid != st.session_state.session_id:
                 st.session_state.session_id = new_sid
                 st.query_params = {"session_id": [new_sid]}
 
-            # 5. Extract assistant reply
             reply = data.get("llm_response", "")
             sentiment = data.get("sentiment")
         except Exception as e:
@@ -74,12 +91,10 @@ if user_input := st.chat_input("Your message..."):
             reply = "Sorry, I couldn't reach the server."
             sentiment = None
 
-    # Keep for demo purposes, delete later
     if sentiment:
         label = sentiment.get("label", "")
         score = sentiment.get("score", 0.0)
         st.chat_message("assistant").write(f"*Sentiment: {label} ({score:.1%})*")
 
-    # Displaying LLM reply
     st.session_state.messages.append({"role": "assistant", "content": reply})
     st.chat_message("assistant").write(reply)
