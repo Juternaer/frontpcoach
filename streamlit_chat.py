@@ -1,14 +1,8 @@
 import streamlit as st
 import requests
-import os
 from datetime import datetime
 from audio_recorder_streamlit import audio_recorder
-
-API_URL = "http://localhost:8000/chat"
-LOGIN_URL = "http://localhost:8000/login"  # Adjust this endpoint as needed
-
-
-st.set_page_config(page_title="Therapist Chat", page_icon="💬")
+from params import *
 
 def send_to_llm_backend(message, session_id=None):
     payload = {"message": message}
@@ -34,34 +28,6 @@ def transcribe_audio_to_backend(audio_data, filename):
         print("Backend response text:", response.text)
         print("Status code:", response.status_code)
         raise
-
-def upload_audio_to_backend(audio_data, filename):
-    """
-    Uploads the audio file to the FastAPI backend.
-    """
-    files = {"audio_file": (filename, audio_data, "audio/wav")}
-    response = requests.post("http://localhost:8000/upload-audio/", files=files)
-    return response.json()
-
-def save_audio_recording(audio_data):
-    """
-    Save audio recording to the recordings folder
-    """
-    RECORDINGS_DIR = "recordings"
-    if not os.path.exists(RECORDINGS_DIR):
-        os.makedirs(RECORDINGS_DIR)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"recording_{timestamp}.wav"
-    filepath = os.path.join(RECORDINGS_DIR, filename)
-
-    try:
-        with open(filepath, "wb") as f:
-            f.write(audio_data.getvalue())
-        return True, filename
-    except Exception as e:
-        return False, str(e)
-
 
 def fetch_history(session_id):
     try:
@@ -99,6 +65,10 @@ def login():
                 st.error(f"Login failed: {e}")
         else:
             st.warning("Please enter a username.")
+
+
+st.set_page_config(page_title="Therapist Chat", page_icon="💬")
+
 
 if "username" not in st.session_state:
     login()
