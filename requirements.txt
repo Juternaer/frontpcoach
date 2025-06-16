@@ -7,7 +7,7 @@
 streamlit
 requests
 random
-#transformers
+audio-recorder-streamlit #maybe the new one?
 
 
 # If you want to display datasets, or if your API returns you dataframes,
