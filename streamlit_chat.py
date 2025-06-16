@@ -4,6 +4,10 @@ from datetime import datetime
 from audio_recorder_streamlit import audio_recorder
 from params import *
 
+API_URL="https://pocketcoach-220311402541.europe-west1.run.app/chat"
+LOGIN_URL="https://pocketcoach-220311402541.europe-west1.run.app/login"
+
+
 def send_to_llm_backend(message, session_id=None):
     payload = {"message": message}
     if session_id:
