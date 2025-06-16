@@ -6,8 +6,7 @@
 # Sreamlit and extensions
 streamlit
 requests
-random
-audio-recorder-streamlit #maybe the new one?
+audio-recorder-streamlit
 
 
 # If you want to display datasets, or if your API returns you dataframes,
