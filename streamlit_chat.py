@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import os
 from datetime import datetime
+from audio_recorder_streamlit import audio_recorder
 
 API_URL = "http://localhost:8000/chat"
 LOGIN_URL = "http://localhost:8000/login"  # Adjust this endpoint as needed
@@ -9,6 +10,20 @@ LOGIN_URL = "http://localhost:8000/login"  # Adjust this endpoint as needed
 
 st.set_page_config(page_title="Therapist Chat", page_icon="💬")
 
+def send_to_llm_backend(message, session_id=None):
+    payload = {"message": message}
+    if session_id:
+        payload["session_id"] = session_id
+    try:
+        resp = requests.post(API_URL, json=payload, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        reply = data.get("llm_response", "")
+        sentiment = data.get("sentiment")
+        return reply, sentiment
+    except Exception as e:
+        st.error(f"Error: {e}")
+        return "Sorry, I couldn't reach the server.", None
 
 def transcribe_audio_to_backend(audio_data, filename):
     files = {"audio_file": (filename, audio_data, "audio/wav")}
@@ -100,17 +115,32 @@ if "messages" not in st.session_state:
 st.title("Therapist Chat")
 st.write(f"Logged in as: {st.session_state.username}")
 
-# --- Audio Recorder in Sidebar ---
-st.sidebar.title("Audio Recorder")
-audio_data = st.sidebar.audio_input("Record your voice", key="audio_input")
+
+with st.sidebar:
+    st.title("Audio Recorder")
+    audio_file = audio_recorder(sample_rate=16_000)
 
 
-if audio_data:
-    st.sidebar.audio(audio_data)
+transcription = None
+
+if audio_file:
     if st.sidebar.button("Transcribe Recording", key="transcribe_recording_sidebar"):
         filename = f"recording_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav"
-        result = transcribe_audio_to_backend(audio_data.getvalue(), filename)
-        st.sidebar.info(f"Transcription: {result.get('transcription')}")
+        result = transcribe_audio_to_backend(audio_file, filename)
+        transcription = result.get('transcription')[0]['text']
+
+        if transcription:
+            # Add transcription as user message
+            st.session_state.messages.append({"role": "user", "content": transcription})
+
+            # --- Send to LLM backend and display response ---
+            with st.spinner("Therapist is thinking..."):
+                reply, sentiment = send_to_llm_backend(transcription, st.session_state.session_id)
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+            if sentiment:
+                label = sentiment.get("label", "")
+                score = sentiment.get("score", 0.0)
+                st.chat_message("assistant").write(f"*Sentiment: {label} ({score:.1%})*")
 
 # Display the chat history
 for msg in st.session_state.messages:
