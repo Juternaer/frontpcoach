@@ -4,8 +4,8 @@ from datetime import datetime
 from audio_recorder_streamlit import audio_recorder
 from params import *
 
-API_URL="https://pocketcoach-api-eddy-460605772486.europe-west1.run.app/.run.app/chat"
-LOGIN_URL="https://pocketcoach-api-eddy-460605772486.europe-west1.run.app/.run.app/login"
+API_URL="https://pocketcoach-api-eddy-460605772486.europe-west1.run.app/chat"
+LOGIN_URL="https://pocketcoach-api-eddy-460605772486.europe-west1.run.app/login"
 
 
 def send_to_llm_backend(message, session_id=None):
@@ -25,7 +25,7 @@ def send_to_llm_backend(message, session_id=None):
 
 def transcribe_audio_to_backend(audio_data, filename):
     files = {"audio_file": (filename, audio_data, "audio/wav")}
-    response = requests.post("https://pocketcoach-api-eddy-460605772486.europe-west1.run.app/.run.app/transcribe-audio/", files=files)
+    response = requests.post("https://pocketcoach-api-eddy-460605772486.europe-west1.run.app/transcribe-audio/", files=files)
     try:
         return response.json()
     except Exception:
@@ -35,7 +35,7 @@ def transcribe_audio_to_backend(audio_data, filename):
 
 def fetch_history(session_id):
     try:
-        resp = requests.get(f"https://pocketcoach-api-eddy-460605772486.europe-west1.run.app/.run.app/chat/{session_id}/history", timeout=10)
+        resp = requests.get(f"https://pocketcoach-api-eddy-460605772486.europe-west1.run.app/chat/{session_id}/history", timeout=10)
         resp.raise_for_status()
         data = resp.json()
         # Convert backend format to frontend format
